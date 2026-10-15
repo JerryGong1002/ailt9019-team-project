@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Spending Analyzer · 消费手记</title>
+  <meta name="description" content="简洁的港币记账与消费统计。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%233568e8'/%3E%3Cpath d='M9 22v-7m7 7V9m7 13V13' stroke='%23fff' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <script src="i18n.js"></script>
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="styles.css"><script src="calculator.js" defer></script><script src="calendar.js" defer></script><script src="budget.js" defer></script><script src="app.js" defer></script>
+</head>
+<body>
+
+  <main>
+    <header class="journal-header"><button type="button" id="open-settings" class="settings-launch" aria-label="设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></svg></button>
+    <div class="page-heading"><div><p class="journal-date" id="journal-date"></p><h1>消费手记</h1></div><div class="mode-switch" aria-label="账本选择"><button id="personal-mode" class="active" aria-pressed="true">我的账本</button><button id="demo-mode" aria-pressed="false">示例账本</button></div></div><button type="button" id="show-history" class="history-link">历史账单 ↗</button></header>
+    <div class="workspace">
+      <div id="entry-home">
+        <section class="entry-panel panel" aria-labelledby="entry-title">
+          <h2 id="entry-title" class="sr-only">记一笔</h2>
+          <form id="expense-form" novalidate>
+            <div class="entry-heading">
+              <div class="entry-display"><p id="calculator-expression" data-no-translate hidden></p><label class="sr-only" for="amount">金额</label><div class="amount-field"><span>HK$</span><input id="amount" name="amount" inputmode="none" autocomplete="off" placeholder="0.00" readonly aria-describedby="calculator-expression entry-error"></div></div>
+              <button type="button" id="close-entry" class="round-close mobile-only" aria-label="关闭记账">×</button>
+            </div>
+            <div class="entry-content"><fieldset class="primary-categories"><legend class="sr-only">大类</legend><div id="categories" class="categories"></div></fieldset>
+            <fieldset id="subcategory-panel" class="subcategory-panel" hidden><legend id="subcategory-title" class="sr-only">小类</legend><div id="subcategories" class="subcategories"></div></fieldset>
+            <div id="calculator-keypad" class="keypad" role="group" aria-label="数字键盘">
+              <button type="button" data-key="clear" class="key-utility" aria-label="清零" data-no-translate>AC</button><button type="button" data-key="backspace" class="key-utility" aria-label="删除一位">⌫</button><button type="button" data-key="/" class="key-operator" aria-label="除法">÷</button><button type="button" data-key="*" class="key-operator" aria-label="乘法">×</button>
+              <button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button><button type="button" data-key="-" class="key-operator" aria-label="减法">−</button>
+              <button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button><button type="button" data-key="+" class="key-operator" aria-label="加法">+</button>
+              <button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button><button type="button" data-key="=" class="key-equals" aria-label="计算结果">=</button>
+              <button type="button" data-key="0" class="key-zero">0</button><button type="button" data-key=".">.</button>
+            </div>
+            <details id="entry-options" class="entry-options"><summary><span>日期与备注</span><span id="entry-options-summary">今天</span></summary><div class="entry-options-body">
+              <fieldset class="date-choice"><legend class="sr-only">日期</legend><label><input type="radio" name="entry-day" value="0" checked><span>今天</span></label><label><input type="radio" name="entry-day" value="-1"><span>昨天</span></label><label><input type="radio" name="entry-day" value="custom"><span>自选日期</span></label></fieldset><input type="date" id="custom-entry-date" aria-label="自选日期" hidden>
+              <label class="note-label" for="expense-note">备注 <span id="note-count" data-no-translate>0 / 50</span></label><textarea id="expense-note" rows="2" maxlength="50" aria-describedby="note-count"></textarea>
+            </div></details></div>
+            <p id="entry-error" class="error" role="alert"></p><button class="save-button" type="submit">保存记录</button>
+          </form><div class="entry-footer"><span id="entry-date"></span><span id="book-status">个人账本</span></div>
+        </section>
+      </div>
+      <div class="overview">
+        <section class="mobile-summary mobile-only panel" aria-labelledby="today-title">
+          <div class="today-spending"><h2 id="today-title">今日总消费</h2><div class="today-amount"><small>HK$</small><strong id="today-total" data-no-translate>0.00</strong></div><p id="today-count">0 笔记录</p></div>
+          <figure class="mini-trend"><figcaption>近 7 天</figcaption><div id="mini-trend-chart"></div><p><span class="mean-marker" aria-hidden="true"></span><span>日均</span> <span id="mini-average" data-no-translate>0.00</span></p></figure>
+          <button type="button" id="start-entry" class="start-entry"><span aria-hidden="true">＋</span><span>开始记账</span></button>
+        </section>
+        <nav class="mobile-actions mobile-only" aria-label="常用功能">
+          <button type="button" data-mobile-action="history"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M7 3v4m10-4v4M3 11h18m-13 5h2m4 0h2"/></svg><span>历史账单</span></button>
+          <button type="button" data-mobile-action="statistics"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V10m7 10V4m7 16v-7"/></svg><span>更多统计</span></button>
+          <button type="button" data-mobile-action="overview"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="m6 15 4-5 4 3 4-6"/></svg><span>消费概览</span></button>
+          <button type="button" data-mobile-action="settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></svg><span>设置</span></button>
+        </nav>
+        <div class="overview-heading"><h2>消费概览</h2></div>
+        <div class="stats"><article class="stat featured"><span>当月总支出</span><div><small>HK$</small> <strong id="total">0.00</strong></div><p id="range-label"></p></article><article class="stat"><span>当月日均</span><div><small>HK$</small> <strong id="average">0.00</strong></div><p id="count">0 笔记录</p></article><article class="stat"><span>当月主要消费</span><div><strong id="top-category" class="category-value">—</strong></div><p id="top-share">暂无记录</p></article><button type="button" id="open-statistics" class="more-statistics"><span aria-hidden="true">↗</span><span>点击查看更多统计</span></button></div>
+        <section class="panel records" id="history" tabindex="-1"><div class="section-heading"><h2><span id="records-title">消费记录</span> <span id="record-count" class="count-pill">0</span></h2><div class="record-controls"><span class="unit" id="records-caption">近 7 天</span><div class="period-control"><select id="period" aria-label="统计时间范围"><option value="7">近 7 天</option><option value="30">近 30 天</option><option value="all">全部时间</option></select><span class="help"><button type="button" aria-label="统计范围说明" aria-describedby="period-help">?</button><span class="tooltip" id="period-help" role="tooltip">近 7 天含今天与前 6 个自然日，近 30 天含今天与前 29 天。日均按整个所选区间计算；全部时间从首笔记录起计算。</span></span></div></div></div><div id="records-body" class="journal-feed" aria-label="消费记录" tabindex="0"></div><div id="records-empty" class="empty"><span aria-hidden="true">＋</span><p>从第一笔消费开始</p></div></section>
+        <div class="charts"><section class="panel trend-panel"><div class="section-heading"><h2>支出趋势</h2><span class="unit">HKD</span></div><div id="trend-chart" class="trend-chart"></div></section><section class="panel category-panel"><div class="section-heading"><h2>分类占比</h2><span class="unit" id="category-count">0 类</span></div><div id="category-chart" class="category-chart"></div></section></div>
+        <section class="weekly panel"><div class="weekly-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h10l3 3v15H4V3h3Zm1 5h8m-8 4h8m-8 4h5"/></svg></div><div><h2>AI 每周回顾 <span class="soon">尚未连接 API</span></h2><p id="weekly-caption">近 7 天 · 暂无支出</p></div><span class="help"><button type="button" aria-label="周报说明" aria-describedby="weekly-help">?</button><span class="tooltip" id="weekly-help" role="tooltip">预留功能，尚未连接 API。未来仅在你请求时发送近 7 天的汇总统计，生成简短周报；金额始终由程序计算。</span></span></section><details class="payload-panel"><summary>查看周报汇总数据</summary><p>仅在本地预览；尚未发送数据，也未生成 AI 周报。</p><pre id="weekly-payload" data-no-translate></pre></details>
+
+      </div>
+    </div>
+  </main>
+  <dialog id="entry-dialog" aria-labelledby="entry-title"></dialog>
+  <dialog id="overview-dialog" aria-labelledby="mobile-overview-title"><div class="settings-heading"><h2 id="mobile-overview-title">消费概览</h2><button type="button" id="close-overview" class="round-close" aria-label="关闭概览">×</button></div><div id="mobile-overview-body"></div></dialog>
+  <div class="toast" id="toast" role="status" hidden><span id="toast-text"></span><button id="undo" hidden>撤销</button></div>
+<dialog id="settings-dialog" aria-labelledby="settings-title"><div class="settings-heading"><h2 id="settings-title">设置</h2><button type="button" id="close-settings" aria-label="关闭设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div class="settings-body"><div class="settings-row"><span id="language-label">语言</span><div class="settings-options" role="group" aria-labelledby="language-label" data-no-translate><button type="button" data-language="zh-CN" aria-pressed="false">简体中文</button><button type="button" data-language="zh-TW" aria-pressed="false">繁體中文</button><button type="button" data-language="en" aria-pressed="false">English</button></div></div><div class="settings-row"><span id="theme-label">深色 / 浅色</span><div class="settings-options" role="group" aria-labelledby="theme-label"><button type="button" data-theme-option="light" aria-pressed="false">浅色</button><button type="button" data-theme-option="dark" aria-pressed="false">深色</button></div></div><h3>分类管理</h3><p class="settings-hint">拖动调整顺序，前五个已启用分类置顶。取消勾选仅隐藏记账入口，历史记录保留。</p><div id="settings-categories"></div><p id="settings-error" role="alert"></p><section class="shortcuts" aria-labelledby="shortcuts-title"><h3 id="shortcuts-title">键盘快捷键</h3><p class="settings-hint">固定快捷键，仅供查看，不可修改。</p><dl><div><dt><kbd data-no-translate>Enter</kbd></dt><dd>金额输入框内保存记账</dd></div><div><dt><kbd data-no-translate>Alt + 1–6</kbd></dt><dd>选择前六个已启用分类</dd></div><div><dt><kbd data-no-translate>↑ / ↓</kbd></dt><dd>聚焦分类拖动按钮时调整顺序</dd></div><div><dt><kbd data-no-translate>↓</kbd></dt><dd>聚焦“其他”时展开更多分类</dd></div><div><dt><kbd data-no-translate>Esc</kbd></dt><dd>关闭设置、统计或更多分类</dd></div><div><dt><kbd data-no-translate>Tab / Shift + Tab</kbd></dt><dd>切换到下一个 / 上一个控件</dd></div></dl></section></div></dialog><dialog id="statistics-dialog" aria-labelledby="statistics-title"><div class="settings-heading"><h2 id="statistics-title">更多统计</h2><button type="button" id="close-statistics" aria-label="关闭统计"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><article class="annual-summary"><span>当年总支出</span><strong id="annual-total"></strong><small id="annual-range"></small></article><form id="statistics-form"><h3>自定义时间段</h3><div class="range-inputs"><label for="statistics-start">开始日期<input type="date" id="statistics-start" required></label><label for="statistics-end">结束日期<input type="date" id="statistics-end" required></label><button type="submit">查看统计</button></div><p id="statistics-error" class="error" role="alert"></p></form><p class="settings-hint">日均按所选区间的全部自然日计算，包含无消费日期。当月和当年统计截至今天。</p><div id="detail-metrics" class="detail-metrics"></div><section class="detail-chart-card"><div class="section-heading"><h3>消费占比</h3><select id="pie-period" aria-label="饼图时间范围"><option value="month">本月</option><option value="7">近 7 天</option><option value="30">近 30 天</option><option value="year">今年</option><option value="all">全部时间</option><option value="custom">自定义时间段</option></select></div><p id="pie-range" class="settings-hint"></p><div id="detail-pie"></div></section><section class="detail-chart-card"><div class="section-heading"><h3>每月支出</h3><select id="bar-year" aria-label="柱状图年份"></select></div><p class="settings-hint">单位 HKD · 当月截至今天，未来月份不计入统计。</p><div id="monthly-bars" class="monthly-bars"></div></section><h3>分类明细</h3><div id="detail-categories"></div></dialog></body></html>
