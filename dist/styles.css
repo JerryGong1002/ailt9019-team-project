@@ -363,15 +363,16 @@ button, label, summary { -webkit-tap-highlight-color: transparent; }
 #budget-dialog { box-sizing:border-box; width:min(480px,calc(100vw - 24px)); max-height:88dvh; overflow:auto; padding:24px; border:1px solid var(--line); border-radius:24px; background:var(--surface); color:var(--text); }
 #budget-dialog::backdrop { background:rgb(30 34 41 / 72%); }
 #budget-dialog h2 { font-size:22px; }
+#budget-close { display:grid; place-items:center; flex:0 0 36px; width:36px; height:36px; padding:0; box-sizing:border-box; }
+#budget-close svg { display:block; }
 #budget-month { color:var(--muted); }
 .budget-details { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
 .budget-details > div { display:grid; gap:8px; padding:12px; border-radius:12px; background:var(--soft); }
 .budget-details span { font-size:12px; color:var(--muted); }
 .budget-details strong { font-size:18px; overflow-wrap:anywhere; }
-#budget-form { display:grid; gap:10px; }
+#budget-form { display:grid; gap:10px; margin-top:16px; }
 #budget-form label { font-size:13px; }
 #budget-form input,#budget-form select { box-sizing:border-box; width:100%; min-width:0; padding:12px; border:1px solid var(--line); border-radius:12px; background:var(--surface); color:var(--text); font:inherit; }
-#budget-form .settings-hint { margin:2px 0; }
 #budget-error:empty { display:none; }
 .budget-buttons { display:flex; flex-wrap:wrap; gap:8px; }
 .budget-buttons button { padding:11px 14px; border:1px solid var(--line); border-radius:12px; background:var(--soft); color:var(--text); font:inherit; font-size:13px; }

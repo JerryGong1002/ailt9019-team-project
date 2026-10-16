@@ -51,14 +51,12 @@ function createBudget({ entries, mode, today, parseAmount, money, notify }) {
   card.innerHTML = '<span class="budget-heading"><span>月预算</span><span aria-hidden="true">↗</span></span><strong id="budget-balance"></strong><span id="budget-usage"></span><span class="budget-track" aria-hidden="true"><span id="budget-fill"></span></span><span id="budget-status"></span>';
   document.querySelector('.overview > .stats').after(card);
   document.body.insertAdjacentHTML('beforeend', `<dialog id="budget-dialog" aria-labelledby="budget-title">
-    <div class="settings-heading"><h2 id="budget-title">月预算</h2><button type="button" id="budget-close" class="round-close" aria-label="关闭预算">×</button></div>
+    <div class="settings-heading"><h2 id="budget-title">月预算</h2><button type="button" id="budget-close" class="round-close" aria-label="关闭预算"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
     <p id="budget-month" data-no-translate></p><div id="budget-details" class="budget-details"></div>
-    <p class="settings-hint">仅扣除本月截至今天的支出，余额不结转。</p>
     <form id="budget-form" novalidate><label for="budget-amount">预算金额（HKD）</label><input id="budget-amount" inputmode="decimal" autocomplete="off" placeholder="3000.00" aria-describedby="budget-error">
     <label for="budget-scope">生效范围</label><select id="budget-scope"><option value="future">本月及以后</option><option value="month">仅本月</option></select>
-    <p class="settings-hint">保存后生效；关闭或取消会放弃未保存修改。</p><p id="budget-error" class="error" role="alert"></p>
+    <p id="budget-error" class="error" role="alert"></p>
     <div class="budget-buttons"><button type="submit" id="budget-save">保存预算</button><button type="button" id="budget-cancel">取消</button><button type="button" id="budget-disable">停用预算</button></div></form>
-    <p class="settings-hint">停用从本月起生效，历史配置保留。示例预算修改刷新后重置。</p>
   </dialog>`);
   const dialog = $('budget-dialog');
   const data = () => mode() === 'personal' ? personal : demo;
