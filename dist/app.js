@@ -759,7 +759,10 @@ function init() {
       feed.append(group);
     }
     $('journal-date').textContent = today.replaceAll('-', ' / ');
-    $('weekly-payload').textContent = JSON.stringify({ currency: 'HKD', start: weekly.start, end: weekly.end, total: weekly.total / 100, average: weekly.average / 100, count: weekly.rows.length, categories: weekly.categories.map(c => ({ category: c.id, total: c.cents / 100 })) }, null, 2);
+    let reportSummary = null;
+    try { reportSummary = WeeklyReportData.buildSummary(entries(), today); } catch {}
+    $('weekly-payload').textContent = reportSummary ? JSON.stringify(reportSummary, null, 2) : 'Summary unavailable.';
+    WeeklyReportUI.update(reportSummary, mode);
     $('records-empty').hidden = !!stats.rows.length; $('records-empty').querySelector('p').textContent = entries().length ? '这个时间段还没有消费记录' : '从第一笔消费开始';
     calendar?.refresh();
     window.AppI18n?.apply();
@@ -810,6 +813,5 @@ function init() {
   });
   render();
   if (!mobileViewport.matches && matchMedia('(pointer: fine)').matches) $('amount').focus({ preventScroll: true });
-  // API integration intentionally deferred. No keys, network calls, or fabricated AI reports.
-  // Future server implementation should accept only statistics(entries(), '7') aggregates.
+  // Reports are explicitly requested through the same-origin Node backend.
 }

@@ -386,3 +386,6 @@ button, label, summary { -webkit-tap-highlight-color: transparent; }
   #budget-dialog { padding:18px; }
   main { min-height:650px; }
 }
+
+/* Explicit weekly report generation and accessible status. */
+.weekly-content{min-width:0;width:100%}.weekly-content p{line-height:1.7}.weekly-content #generate-report{border:0;border-radius:12px;background:var(--accent);color:var(--surface);padding:12px 18px;margin-top:12px}.weekly-content #generate-report:disabled{opacity:.6;cursor:wait}#report-status{color:var(--muted)}#weekly-report{font-size:15px;white-space:pre-wrap}#weekly-report:empty{display:none}

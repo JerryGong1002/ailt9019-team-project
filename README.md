@@ -75,7 +75,7 @@ Use the same browser and origin to access the same personal ledger. Browser stor
 
 ## Data and calculation rules
 
-Personal records are stored in browser `localStorage`. A separate demo ledger contains two weeks of synthetic data; demo changes reset on reload and do not affect personal records. There is no backend or cross-device synchronization.
+Personal records are stored in browser `localStorage`. A separate demo ledger contains two weeks of synthetic data; demo changes reset on reload and do not affect personal records. The optional backend generates AI reports from aggregate data; it does not store or synchronize ledgers across devices.
 
 Amounts are stored as integer HKD cents and converted to HKD for display. Notes stay in local records and are excluded from the weekly-report payload.
 
@@ -83,15 +83,55 @@ The last seven days means today and the preceding six local calendar days, inclu
 
 For trends longer than 30 days, consecutive date buckets show average daily spending within each bucket. The horizontal reference line represents the daily average across the full selected interval.
 
-## Weekly report and planned API integration
+## AI weekly report
 
-The weekly-report area currently displays an API-disconnected state and lets users inspect a locally generated summary JSON payload. It does not call an agent API or generate an AI report.
+The weekly-review button now calls a same-origin Node backend, which sends aggregate statistics to the configured AI provider (OpenAI Responses or Alibaba-compatible Chat Completions). The global master prompt lives in `server/weekly-report-prompt.txt` and includes one clarification: matching category totals cannot establish the category of the maximum expense. It requests a neutral English paragraph of 3–5 sentences, without recommendations. Raw records, IDs, notes, subcategories, and creation timestamps are never sent. Reports stay in browser memory and disappear when the selected ledger or summary changes or the page reloads.
 
-In `dist/app.js`, `statistics(entries, '7')` produces the weekly summary. A future backend should call the agent API with credentials stored on the server. Send only the approved summary fields: `currency`, `start`, `end`, `total`, `average`, `count`, and category totals. Exclude raw `rows`, record IDs, notes, and individual transactions.
+The browser produces two adjacent seven-day summaries ending on the user's local date. The server validates dates, totals, counts, categories, daily totals and maximum amounts, then calculates category shares and changes. Percentage change is null when the previous total is zero. Zero previous recorded spending is a valid recorded baseline, not evidence about real-world spending. Empty current weeks use the exact fallback locally without a paid request. Invalid summaries are rejected before the API is called.
 
-Preserve explicit empty-week and API-failure states. Numerical summaries and charts should continue to work independently of the API.
+### Run the full pipeline locally
 
-The current frontend implements calculations in JavaScript. A future Python backend should preserve the same validation, date boundaries, and statistical rules.
+Requires Node.js 22 or newer; no npm packages are needed.
+
+1. Copy `.env.example` to `.env` in the repository root.
+2. Set the provider credentials and model in `.env` as described below. Never put the key in `dist/` or browser code.
+3. Run:
+
+```sh
+node --env-file=.env server/server.cjs
+```
+
+4. Open the URL printed by the server, select Demo, inspect the summary, then click **Generate weekly report**. The default port is 9019; the current local `.env` uses `PORT=9020`, so its URL is `http://127.0.0.1:9020`. Leave the terminal running while using the app; press Ctrl+C to stop it.
+
+Without credentials, the server still serves the app and reports a clear configuration error for non-empty reports. Python static hosting and directly opening the HTML remain available for the ledger but do not provide AI reporting. Continue using the same browser origin to retain your existing personal records.
+
+### Alibaba Cloud Bailian configuration
+
+Use server-only environment variables:
+
+```dotenv
+AI_API_FORMAT=chat
+AI_BASE_URL=https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1
+AI_MODEL=qwen3.8-flash
+AI_ENABLE_THINKING=false
+AI_API_KEY=your-private-group-key
+```
+
+The actual group key belongs only in the Git-ignored `.env` or host secret settings. It is never included in the example file, browser assets, or tests. The configured Flash model was listed by the course endpoint's `/models` response on 23 October 2026. The course message says the shared allocation is 25,000 credits, coursework only, expiring 19 November 2026; model availability and credit consumption remain provider-controlled.
+
+The backend uses `/chat/completions` with the master prompt as a system message and summary JSON as a user message. Qwen thinking mode is disabled for short direct answers. Only a completed text answer is accepted; truncated responses are treated as errors. One upstream call may run at a time **per server process**, with no automatic retries. Other group members and additional deployments are outside this concurrency limit. For OpenAI instead, retain `AI_API_FORMAT=responses`, set `AI_BASE_URL=https://api.openai.com/v1`, and supply an OpenAI key/model; legacy `OPENAI_API_KEY` and `OPENAI_MODEL` variables remain supported.
+
+Alibaba's public endpoint documentation labels Token Plan access for coding tools rather than backend services. The course-provided access and instructions should be checked with the teaching team before a public deployment; use the configuration appropriate to the sponsored arrangement.
+
+### Local demo server
+
+The app does not require a demo access code. It binds to `127.0.0.1` by default for local use. Keep the provider key in `.env`; the browser calls the local server without a password.
+
+`.openai/hosting.json` is static-only and cannot run the report backend. For the local full pipeline, use the Node command above.
+
+A global process-local limit allows 30 provider attempts per hour by default, configurable with `REPORT_MAX_CALLS_PER_HOUR` (1–1000). Failed attempts count too. One provider call may run at a time, calls time out after 30 seconds, and output is capped at 2048 tokens. The hourly cap resets on process restart.
+
+No provider secrets or upstream errors are sent to the browser. OpenAI Responses requests use `store: false`; Chat Completions requests omit this provider-specific setting. Neither promises zero retention by the provider. No application-level expense/report database or request-body logging is added. The prompt guides factual behavior but does not guarantee factual accuracy; inspect real outputs before presenting. Live provider access, model compatibility, latency and report quality require a credentialed smoke test.
 
 ## Repository structure
 
@@ -105,6 +145,10 @@ The current frontend implements calculations in JavaScript. A future Python back
 | `dist/budget.js` | Budget validation, settings, calculations, and interface |
 | `dist/i18n.js` | Existing language selection and translation layer |
 | `dist/theme.js` | Theme selection and persistence |
+| `dist/report-data.js` | Aggregate report schema, validation, and comparisons |
+| `dist/report-ui.js` | Explicit generation, loading/errors, and stale-response protection |
+| `server/server.cjs` | Static server and local AI report endpoint |
+| `server/weekly-report-prompt.txt` | Global report master prompt |
 | `tests/*.test.cjs` | Statistics, calendar, calculator, and budget tests |
 | `.openai/hosting.json` | Static hosting configuration targeting `dist` |
 
@@ -121,6 +165,9 @@ node --check dist/calculator.js
 node --check dist/budget.js
 node --check dist/i18n.js
 node --check dist/theme.js
+node --check dist/report-data.js
+node --check dist/report-ui.js
+node --check server/server.cjs
 node --test tests/*.test.cjs
 ```
 
