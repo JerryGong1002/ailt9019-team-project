@@ -4,15 +4,6 @@ A browser-based HKD expense tracker developed for the AILT9019 Group 9 team proj
 
 ## Project language requirement
 
-**English is the required working language throughout the project.** Use English for:
-
-- Project documentation, setup instructions, reports, presentation slides, and demonstration materials.
-- Source-code identifiers, comments, test descriptions, and developer-facing messages.
-- Interface text, validation messages, accessibility labels, and sample content.
-- Commit messages, pull requests, issues, and team contributions recorded in this repository.
-
-Write new and revised project content in clear, consistent English. Review contributions for language consistency before merging.
-
 The current prototype defaults to English on first use and remembers the selected language. It also contains legacy Simplified Chinese and Traditional Chinese translations and Chinese source strings. These remain in the implementation and require a separate migration to meet the project-wide English requirement fully.
 
 ## Run locally
