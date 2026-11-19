@@ -102,3 +102,30 @@ test('only one upstream call is allowed at a time',async()=>{
     try{assert.equal((await post(base,fixture())).status,429);}finally{release();await first;}
   });
 });
+
+test('Gemini uses the compatible endpoint and low reasoning without Alibaba parameters',async()=>{
+  await usingServer({apiKey:'fake-gemini',model:'gemini-3.1-flash-lite',apiFormat:'chat',baseUrl:'https://generativelanguage.googleapis.com/v1beta/openai',reasoningEffort:'low',fetchImpl:async(url,options)=>{
+    assert.equal(url,'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions');
+    assert.equal(options.headers.authorization,'Bearer fake-gemini');
+    const body=JSON.parse(options.body);
+    assert.equal(body.model,'gemini-3.1-flash-lite');
+    assert.equal(body.reasoning_effort,'low');
+    assert.equal(body.enable_thinking,undefined);
+    return {ok:true,json:async()=>({choices:[{finish_reason:'stop',message:{content:'Recorded spending was HK$30.00.'}}]})};
+  }},async base=>{assert.equal((await post(base,fixture())).status,200);});
+});
+test('Pages CORS permits the exact origin, rejects others and preserves error headers',async()=>{
+  const origin='https://jerrygong1002.github.io';
+  await usingServer({allowedOrigins:[origin]},async base=>{
+    const pre=await fetch(base+'/api/weekly-report',{method:'OPTIONS',headers:{origin,'access-control-request-method':'POST','access-control-request-headers':'content-type'}});
+    assert.equal(pre.status,204);
+    assert.equal(pre.headers.get('access-control-allow-origin'),origin);
+    const blocked=await fetch(base+'/api/weekly-report',{method:'OPTIONS',headers:{origin:origin+'.evil.example'}});
+    assert.equal(blocked.status,403);
+    assert.equal(blocked.headers.get('access-control-allow-origin'),null);
+    const missing=await fetch(base+'/api/weekly-report',{method:'POST',headers:{origin,'content-type':'application/json'},body:JSON.stringify(fixture())});
+    assert.equal(missing.status,503);
+    assert.equal(missing.headers.get('access-control-allow-origin'),origin);
+    assert.equal((await fetch(base+'/healthz')).status,200);
+  });
+});

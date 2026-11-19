@@ -2,9 +2,9 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
-function ui(fetchImpl) {
+function ui(fetchImpl,config={apiBaseUrl:''},hostname='localhost') {
   const nodes=Object.fromEntries(['generate-report','weekly-report','report-status'].map(id=>[id,{textContent:'',value:'',disabled:false,addEventListener(name,fn){this[name]=fn;}}]));
-  const context=vm.createContext({document:{getElementById:id=>nodes[id]},location:{protocol:'http:'},fetch:fetchImpl,AbortController,setTimeout,clearTimeout});
+  const context=vm.createContext({document:{getElementById:id=>nodes[id]},location:{protocol:'https:',hostname},SPENDLY_CONFIG:config,fetch:fetchImpl,AbortController,setTimeout,clearTimeout});
   vm.runInContext(fs.readFileSync('dist/report-ui.js','utf8')+'\nglobalThis.ui=WeeklyReportUI;',context);
   return {nodes,update:context.ui.update,click:()=>nodes['generate-report'].click()};
 }
@@ -46,4 +46,19 @@ test('configuration errors are visible and allow retry',async()=>{
   u.update({current:{count:1}},'demo');await u.click();
   assert.equal(u.nodes['report-status'].textContent,'Not configured');
   assert.equal(u.nodes['generate-report'].disabled,false);
+});
+
+test('Pages sends requests to the configured backend without a provider key',async()=>{
+  const u=ui(async(url,options)=>{
+    assert.equal(url,'https://example.onrender.com/api/weekly-report');
+    assert.equal(options.headers.authorization,undefined);
+    return {ok:true,json:async()=>({report:'Recorded spending report.'})};
+  },{apiBaseUrl:'https://example.onrender.com/'},'jerrygong1002.github.io');
+  u.update({current:{count:1}},'demo');await u.click();
+  assert.equal(u.nodes['weekly-report'].textContent,'Recorded spending report.');
+});
+test('unconfigured Pages shows an actionable error without calling the static host',async()=>{
+  const u=ui(()=>{throw new Error('Unexpected request');},{apiBaseUrl:''},'jerrygong1002.github.io');
+  u.update({current:{count:1}},'demo');await u.click();
+  assert.match(u.nodes['report-status'].textContent,/not been connected/);
 });

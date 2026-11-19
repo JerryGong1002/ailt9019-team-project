@@ -6,19 +6,30 @@ const {validateSummary,modelSummary}=require('../dist/report-data.js');
 const prompt=fs.readFileSync(path.join(__dirname,'weekly-report-prompt.txt'),'utf8');
 const root=path.join(__dirname,'../dist');
 const assets=new Set(fs.readdirSync(root).filter(name=>/\.(html|js|css)$/.test(name)));
-function createServer({apiKey='',model='',apiFormat='responses',baseUrl='https://api.openai.com/v1',enableThinking,maxCalls=30,fetchImpl=fetch}={}) {
+function createServer({apiKey='',model='',apiFormat='responses',baseUrl='https://api.openai.com/v1',enableThinking,reasoningEffort,allowedOrigins=[],maxCalls=30,fetchImpl=fetch}={}) {
   if(!['responses','chat'].includes(apiFormat)) throw new Error('AI_API_FORMAT must be responses or chat');
   if(enableThinking!==undefined && typeof enableThinking!=='boolean') throw new Error('AI_ENABLE_THINKING must be true or false');
   const endpoint=new URL(baseUrl);
   if(endpoint.protocol!=='https:' || endpoint.username || endpoint.password || endpoint.search || endpoint.hash) throw new Error('AI_BASE_URL must be an HTTPS base URL without credentials, query or fragment');
+  const origins=new Set(allowedOrigins);
   const apiUrl=baseUrl.replace(/\/+$/,'')+(apiFormat==='chat'?'/chat/completions':'/responses');
   let windowStart=Date.now(), calls=0, active=false;
   return http.createServer(async(req,res)=>{
     const send=(status,data)=>{res.writeHead(status,{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'});res.end(JSON.stringify(data));};
     const url=new URL(req.url,'http://localhost');
+    if (url.pathname==='/healthz' && ['GET','HEAD'].includes(req.method)) return send(200,{status:'ok'});
     if (url.pathname==='/api/weekly-report') {
+      const origin=req.headers.origin;
+      res.setHeader('Vary','Origin');
+      if (origin && origin!==`http://${req.headers.host}` && origin!==`https://${req.headers.host}` && !origins.has(origin)) return send(403,{error:'Cross-origin requests are not allowed.'});
+      if(origin) res.setHeader('Access-Control-Allow-Origin',origin);
+      if(req.method==='OPTIONS') {
+        res.setHeader('Access-Control-Allow-Methods','POST, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers','Content-Type');
+        res.setHeader('Access-Control-Max-Age','600');
+        res.writeHead(204);return res.end();
+      }
       if (req.method!=='POST') return send(405,{error:'Use POST to generate a report.'});
-      if (req.headers.origin && req.headers.origin!==`http://${req.headers.host}` && req.headers.origin!==`https://${req.headers.host}`) return send(403,{error:'Cross-origin requests are not allowed.'});
       if (!(req.headers['content-type']||'').startsWith('application/json')) return send(415,{error:'Send a JSON summary.'});
       let summary;
       try {
@@ -35,7 +46,7 @@ function createServer({apiKey='',model='',apiFormat='responses',baseUrl='https:/
       try {
         const input=JSON.stringify(modelSummary(summary));
         const body=apiFormat==='chat'
-          ? {model,messages:[{role:'system',content:prompt},{role:'user',content:input}],max_tokens:2048,stream:false,...(enableThinking===undefined?{}:{enable_thinking:enableThinking})}
+          ? {model,messages:[{role:'system',content:prompt},{role:'user',content:input}],max_tokens:2048,stream:false,...(reasoningEffort?{reasoning_effort:reasoningEffort}:{}),...(enableThinking===undefined?{}:{enable_thinking:enableThinking})}
           : {model,instructions:prompt,input,max_output_tokens:2048,store:false};
         const response=await fetchImpl(apiUrl,{method:'POST',headers:{authorization:`Bearer ${apiKey}`,'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(30000),redirect:'error'});
         if (!response.ok) throw new Error('provider');
@@ -67,6 +78,6 @@ if(require.main===module){
   if(!Number.isSafeInteger(maxCalls)||maxCalls<1||maxCalls>1000) throw new Error('Invalid REPORT_MAX_CALLS_PER_HOUR');
   const thinking=process.env.AI_ENABLE_THINKING;
   if(thinking && !['true','false'].includes(thinking)) throw new Error('AI_ENABLE_THINKING must be true or false');
-  createServer({apiKey:process.env.AI_API_KEY||process.env.OPENAI_API_KEY,model:process.env.AI_MODEL||process.env.OPENAI_MODEL,apiFormat:process.env.AI_API_FORMAT||'responses',baseUrl:process.env.AI_BASE_URL||'https://api.openai.com/v1',enableThinking:thinking?thinking==='true':undefined,maxCalls}).listen(port,host,()=>console.log(`Spending Analyzer: http://${host}:${port}`));
+  createServer({apiKey:process.env.AI_API_KEY||process.env.OPENAI_API_KEY,model:process.env.AI_MODEL||process.env.OPENAI_MODEL,apiFormat:process.env.AI_API_FORMAT||'responses',baseUrl:process.env.AI_BASE_URL||'https://api.openai.com/v1',enableThinking:thinking?thinking==='true':undefined,reasoningEffort:process.env.AI_REASONING_EFFORT,allowedOrigins:(process.env.ALLOWED_ORIGINS||'').split(',').map(x=>x.trim()).filter(Boolean),maxCalls}).listen(port,host,()=>console.log(`Spending Analyzer: http://${host}:${port}`));
 }
 module.exports={createServer};

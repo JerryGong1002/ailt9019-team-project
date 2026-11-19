@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: spendly-group9-api
+    runtime: node
+    plan: free
+    buildCommand: node --test tests/*.test.cjs
+    startCommand: node server/server.cjs
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: 22.16.0
+      - key: HOST
+        value: 0.0.0.0
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_MODEL
+        value: gemini-3.1-flash-lite
+      - key: AI_API_FORMAT
+        value: chat
+      - key: AI_BASE_URL
+        value: https://generativelanguage.googleapis.com/v1beta/openai
+      - key: AI_REASONING_EFFORT
+        value: low
+      - key: ALLOWED_ORIGINS
+        value: https://jerrygong1002.github.io
+      - key: REPORT_MAX_CALLS_PER_HOUR
+        value: "30"

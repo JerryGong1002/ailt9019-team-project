@@ -6,6 +6,21 @@ A browser-based HKD expense tracker developed for the AILT9019 Group 9 team proj
 
 The current prototype defaults to English on first use and remembers the selected language. It also contains legacy Simplified Chinese and Traditional Chinese translations and Chinese source strings. These remain in the implementation and require a separate migration to meet the project-wide English requirement fully.
 
+## Gemini deployment (GitHub Pages + Render)
+
+The deployment preset uses Google AI Studio Gemini API through Google's OpenAI-compatible endpoint, with `gemini-3.1-flash-lite` and low reasoning effort. The model can be changed using `AI_MODEL` on Render. Credentials and model access still require a live check after entering the key.
+
+[Deploy the backend on Render](https://render.com/deploy?repo=https://github.com/JerryGong1002/ailt9019-team-project)
+
+1. Sign in to Render and use the deployment link. The root `render.yaml` selects a free Node service and fills all non-secret settings. Enter the Gemini key in `AI_API_KEY` when prompted. No key goes in GitHub.
+2. After deployment, copy Render's actual HTTPS service URL into `apiBaseUrl` in `dist/config.js`. Do not guess the assigned hostname. The Render URL also serves the complete app directly.
+3. In GitHub Settings > Pages, select GitHub Actions. The included Pages workflow tests and publishes `dist` on pushes to `main`.
+4. Open the Pages site, select Demo and generate a report. Confirm a successful real output and check its figures. Test the error state with a missing key separately.
+
+The allowed browser origin is `https://jerrygong1002.github.io` (no repository path). Change `ALLOWED_ORIGINS` if using a custom domain. CORS is not authentication: the public demo has a process-local cap of 30 upstream attempts per hour and one concurrent request. Limits reset on restart and are not shared between replicas. Free Render instances may sleep, so the first request can be slow; the browser waits up to 90 seconds. The upstream provider timeout remains 30 seconds.
+
+References: [Gemini compatibility](https://ai.google.dev/gemini-api/docs/openai), [Render Blueprints](https://render.com/docs/blueprint-spec).
+
 ## Run locally
 
 From the repository root:
@@ -105,7 +120,7 @@ node --env-file=.env server/server.cjs
 
 Without credentials, the server still serves the app and reports a clear configuration error for non-empty reports. Python static hosting and directly opening the HTML remain available for the ledger but do not provide AI reporting. Continue using the same browser origin to retain your existing personal records.
 
-### Alibaba Cloud Bailian configuration
+### Previous Alibaba Cloud Bailian configuration (historical)
 
 Use server-only environment variables:
 
