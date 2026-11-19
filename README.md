@@ -13,8 +13,8 @@ The deployment preset uses Google AI Studio Gemini API through Google's OpenAI-c
 [Deploy the backend on Render](https://render.com/deploy?repo=https://github.com/JerryGong1002/ailt9019-team-project)
 
 1. Sign in to Render and use the deployment link. The root `render.yaml` selects a free Node service and fills all non-secret settings. Enter the Gemini key in `AI_API_KEY` when prompted. No key goes in GitHub.
-2. After deployment, copy Render's actual HTTPS service URL into `apiBaseUrl` in `dist/config.js`. Do not guess the assigned hostname. The Render URL also serves the complete app directly.
-3. In GitHub Settings > Pages, select GitHub Actions. The included Pages workflow tests and publishes `dist` on pushes to `main`.
+2. After deployment, copy Render's actual HTTPS service URL into `apiBaseUrl` in `dist/config.js` on main and `demo/config.js` on gh-pages. Do not guess the assigned hostname. The Render URL also serves the complete app directly.
+3. Keep the existing GitHub Pages source (`gh-pages`, repository root). Publish the updated `dist` files under `demo/` on that branch, preserving the project overview at the root.
 4. Open the Pages site, select Demo and generate a report. Confirm a successful real output and check its figures. Test the error state with a missing key separately.
 
 The allowed browser origin is `https://jerrygong1002.github.io` (no repository path). Change `ALLOWED_ORIGINS` if using a custom domain. CORS is not authentication: the public demo has a process-local cap of 30 upstream attempts per hour and one concurrent request. Limits reset on restart and are not shared between replicas. Free Render instances may sleep, so the first request can be slow; the browser waits up to 90 seconds. The upstream provider timeout remains 30 seconds.
