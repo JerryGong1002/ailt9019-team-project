@@ -42,4 +42,5 @@ const WeeklyReportData = (() => {
   }
   return {buildSummary,validateSummary,modelSummary};
 })();
+if (typeof globalThis!=='undefined' && !globalThis.WeeklyReportData) globalThis.WeeklyReportData=WeeklyReportData;
 if (typeof module!=='undefined') module.exports=WeeklyReportData;

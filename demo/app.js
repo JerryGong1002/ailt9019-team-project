@@ -417,12 +417,54 @@ function init() {
     }).join('');
     window.AppI18n?.apply();
   }
+  function syncReportPromptUI(message) {
+    const promptApi = globalThis.WeeklyReportPromptConfig;
+    const input = $('report-prompt-input');
+    const statusEl = $('report-prompt-status');
+    if (!input || !statusEl) return;
+    input.value = promptApi ? promptApi.getActiveReportPrompt() : '';
+    statusEl.classList.remove('is-error');
+    statusEl.textContent = message || (promptApi?.isCustomReportPrompt() ? '已保存自定义提示词' : '当前使用默认提示词');
+  }
   function saveSettings() {
     try { localStorage.setItem(SETTINGS_KEY, JSON.stringify({ order: categoryOrder, disabled: disabledCategories })); $('settings-error').textContent = ''; }
     catch { $('settings-error').textContent = '设置未能保存，刷新后将恢复。'; }
     refreshPicker(); renderSettings();
   }
-  $('open-settings').addEventListener('click', () => { renderSettings(); $('settings-dialog').showModal(); });
+  $('open-settings').addEventListener('click', () => { syncReportPromptUI(); renderSettings(); $('settings-dialog').showModal(); });
+  $('report-prompt-input')?.addEventListener('input', () => {
+    const promptApi = globalThis.WeeklyReportPromptConfig;
+    const statusEl = $('report-prompt-status');
+    if (!promptApi || !statusEl) return;
+    const res = promptApi.saveReportPrompt($('report-prompt-input').value);
+    if (!res.ok) {
+      statusEl.classList.add('is-error');
+      statusEl.textContent = '设置未能保存，刷新后将恢复。';
+      $('settings-error').textContent = '设置未能保存，刷新后将恢复。';
+    } else {
+      statusEl.classList.remove('is-error');
+      $('settings-error').textContent = '';
+      statusEl.textContent = res.custom ? '已保存自定义提示词' : '当前使用默认提示词';
+    }
+    window.AppI18n?.apply();
+  });
+  $('reset-report-prompt')?.addEventListener('click', () => {
+    const promptApi = globalThis.WeeklyReportPromptConfig;
+    const statusEl = $('report-prompt-status');
+    if (!promptApi || !statusEl) return;
+    const res = promptApi.resetReportPrompt();
+    $('report-prompt-input').value = promptApi.getActiveReportPrompt();
+    if (!res.ok) {
+      statusEl.classList.add('is-error');
+      statusEl.textContent = '设置未能保存，刷新后将恢复。';
+      $('settings-error').textContent = '设置未能保存，刷新后将恢复。';
+    } else {
+      statusEl.classList.remove('is-error');
+      $('settings-error').textContent = '';
+      statusEl.textContent = '已恢复默认提示词';
+    }
+    window.AppI18n?.apply();
+  });
   $('close-settings').addEventListener('click', () => $('settings-dialog').close());
   $('settings-dialog').addEventListener('close', () => focusFeature('settings', 'open-settings'));
   $('settings-categories').addEventListener('change', event => {
@@ -811,6 +853,7 @@ function init() {
       pointerStartedOutside = false;
     });
   });
+  syncReportPromptUI();
   render();
   if (!mobileViewport.matches && matchMedia('(pointer: fine)').matches) $('amount').focus({ preventScroll: true });
   // Reports are explicitly requested through the same-origin Node backend.

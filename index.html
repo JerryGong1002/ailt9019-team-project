@@ -1,6 +1,653 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Spendly · Group 9</title><style>
-*{box-sizing:border-box}body{margin:0;background:#f7f8f2;color:#172d28;font:17px/1.6 "Segoe UI",sans-serif}main{max-width:850px;margin:auto;padding:clamp(24px,6vw,64px)}header{border-bottom:2px solid #235a49;padding-bottom:2em}h1{font:normal clamp(56px,10vw,96px)/1 Georgia,serif;margin:.28em 0}h2{font:normal 32px/1.2 Georgia,serif;margin:1.4em 0 .4em}a{color:#165842}nav{display:flex;gap:1.25em;align-items:center;flex-wrap:wrap}.primary{background:#225b49;color:white;padding:.55em 1em;border-radius:6px;text-decoration:none}code{overflow-wrap:anywhere}footer{margin-top:3em;border-top:1px solid #bbc9bc;padding-top:1em}</style></head><body><main><header><small>AILT9019 · Group 9</small><h1>Spendly</h1><p>Track everyday purchases in Hong Kong dollars and see where your money went this week. Your ledger stays in the browser.</p><nav><a class="primary" href="demo/">Open the expense tracker</a><a href="https://github.com/JerryGong1002/ailt9019-team-project">View source on GitHub</a></nav></header>
-<h2>Try a purchase</h2><p>Enter <code>10 / 3 * 3</code> on the calculator, choose a category and save. Look for a new HKD 10.00 entry in today’s records, then open the calendar to see it on today’s date. The calculator keeps exact fractions until the final amount is rounded to cents.</p>
-<h2>From entries to a weekly review</h2><p>The tracker groups purchases by date and category. Future entries appear in the calendar and join actual spending totals when their date arrives. For an AI review, the local app compares two adjacent seven-day periods. It sends aggregate figures through the backend to the model, keeping individual entries and notes in the browser.</p>
-<h2>Run locally</h2><p>Download or clone the repository and open <code>dist/index.html</code> to use the ledger. For AI reviews, follow the <a href="https://github.com/JerryGong1002/ailt9019-team-project#run-locally">README</a> to configure a private provider key in the server’s <code>.env</code> file. Run <code>node --env-file=.env server/server.cjs</code> from the repository root, then open <code>http://127.0.0.1:9019</code>. With a recorded expense and working provider access, generating a review returns a short English summary. The hosted demo runs the browser features only.</p>
-<footer>Spendly · AILT9019 AI Literacy II</footer></main></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spendly · AILT9019 Group 9</title>
+  <meta name="description" content="Spendly — AILT9019 Group 9 browser-local HKD expense tracker with exact-fraction arithmetic, calendar heatmap, monthly budgets, and privacy-preserving AI weekly reviews.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23225b49'/%3E%3Cpath d='M9 22v-7m7 7V9m7 13V13' stroke='%23f7f8f2' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #f7f8f2;
+      color: #172d28;
+      font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 16px;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    a { color: #165842; text-underline-offset: 3px; }
+    a:hover { color: #0e3f2f; }
+    a:focus-visible, button:focus-visible, summary:focus-visible {
+      outline: 2px solid #225b49;
+      outline-offset: 2px;
+      border-radius: 3px;
+    }
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      background: #225b49;
+      color: #ffffff;
+      padding: 8px 14px;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .skip-link:focus {
+      left: 12px;
+      top: 12px;
+      z-index: 20;
+    }
+    .site-wrap {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: clamp(24px, 5vw, 48px) clamp(18px, 4vw, 36px) 56px;
+    }
+    .top-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      padding-bottom: 14px;
+      margin-bottom: 34px;
+      border-bottom: 1px solid #ccd7cb;
+      font-size: 13.5px;
+    }
+    .top-nav-brand {
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #235a49;
+      text-decoration: none;
+    }
+    .top-nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+    }
+    .top-nav-links a {
+      color: #355249;
+      text-decoration: none;
+    }
+    .top-nav-links a:hover {
+      color: #165842;
+      text-decoration: underline;
+    }
+    .hero {
+      padding-bottom: 28px;
+      border-bottom: 2px solid #235a49;
+    }
+    .eyebrow {
+      font-size: 13px;
+      color: #456358;
+      letter-spacing: 0.03em;
+      margin: 0 0 8px;
+    }
+    h1 {
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 400;
+      font-size: clamp(34px, 7.5vw, 56px);
+      line-height: 1.05;
+      margin: 0 0 14px;
+      color: #132823;
+    }
+    .lead {
+      font-size: 17px;
+      color: #2d443e;
+      max-width: 680px;
+      margin: 0 0 22px;
+    }
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 12px;
+      align-items: center;
+    }
+    .btn-primary {
+      display: inline-block;
+      background: #225b49;
+      color: #ffffff;
+      padding: 9px 18px;
+      border-radius: 5px;
+      text-decoration: none;
+      font-size: 14.5px;
+      font-weight: 500;
+    }
+    .btn-primary:hover {
+      background: #1a4739;
+      color: #ffffff;
+    }
+    .btn-secondary {
+      display: inline-block;
+      border: 1px solid #9db3a8;
+      color: #1a4b3c;
+      background: transparent;
+      padding: 8px 16px;
+      border-radius: 5px;
+      text-decoration: none;
+      font-size: 14.5px;
+    }
+    .btn-secondary:hover {
+      background: #eff3ea;
+      color: #13392d;
+    }
+    .meta-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 24px;
+      padding-top: 18px;
+      border-top: 1px solid #d5dfd3;
+    }
+    .meta-item span {
+      display: block;
+      font-size: 12px;
+      color: #4f6b61;
+    }
+    .meta-item strong {
+      font-size: 15px;
+      color: #172d28;
+      font-weight: 600;
+    }
+    section {
+      padding: 32px 0 6px;
+      scroll-margin-top: 18px;
+    }
+    h2 {
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 400;
+      font-size: clamp(24px, 4vw, 28px);
+      line-height: 1.25;
+      margin: 0 0 12px;
+      color: #162e28;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #d4ded3;
+    }
+    h3 {
+      font-size: 15.5px;
+      font-weight: 600;
+      margin: 18px 0 6px;
+      color: #1c4438;
+    }
+    p { margin: 0 0 12px; }
+    ul {
+      margin: 6px 0 14px;
+      padding-left: 20px;
+    }
+    li { margin-bottom: 6px; }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin: 14px 0;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin: 14px 0;
+    }
+    .box {
+      background: #fcfdf9;
+      border: 1px solid #cfdacc;
+      border-radius: 6px;
+      padding: 15px 16px;
+      min-width: 0;
+    }
+    .box h3 { margin-top: 0; }
+    .box > :last-child { margin-bottom: 0; }
+    .step-num {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 12.5px;
+      color: #235a49;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 4px;
+      display: block;
+    }
+    .callout {
+      border-left: 3px solid #225b49;
+      background: #eff3ea;
+      padding: 12px 16px;
+      margin: 14px 0;
+      font-size: 14.5px;
+    }
+    .table-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 12px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      border-top: 1.5px solid #235a49;
+      border-bottom: 1.5px solid #235a49;
+      background: #fcfdf9;
+    }
+    th, td {
+      text-align: left;
+      vertical-align: top;
+      padding: 10px 12px;
+    }
+    th {
+      border-bottom: 1px solid #bfd0c0;
+      color: #1d4438;
+      font-weight: 600;
+      background: #eff3ea;
+    }
+    td { border-bottom: 1px solid #dfe7dc; }
+    tr:last-child td { border-bottom: none; }
+    .num {
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.88em;
+      background: #e9efe4;
+      padding: 1px 5px;
+      border-radius: 3px;
+      overflow-wrap: anywhere;
+    }
+    pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12.5px;
+      line-height: 1.55;
+      overflow-x: auto;
+      margin: 12px 0;
+      background: #eef2e8;
+      border: 1px solid #cdd9cb;
+      border-radius: 5px;
+      padding: 12px 14px;
+      color: #19312b;
+    }
+    pre code {
+      background: transparent;
+      padding: 0;
+      overflow-wrap: normal;
+    }
+    .note {
+      font-size: 13.5px;
+      color: #3f5c52;
+    }
+    .links-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 18px;
+      margin-top: 14px;
+      padding: 0;
+      list-style: none;
+      font-size: 14.5px;
+    }
+    .site-footer {
+      margin-top: 40px;
+      padding-top: 16px;
+      border-top: 1px solid #bcc9bc;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      font-size: 13px;
+      color: #4f6b61;
+    }
+    @media (max-width: 780px) {
+      h1 { font-size: 32px; }
+      .meta-strip, .grid-3, .grid-2 {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .top-nav {
+        margin-bottom: 24px;
+      }
+      th, td {
+        padding: 8px 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <div class="site-wrap">
+    <nav class="top-nav" aria-label="Section navigation">
+      <a class="top-nav-brand" href="#top">Spendly · Group 9</a>
+      <div class="top-nav-links">
+        <a href="#sec-overview">Problem</a>
+        <a href="#sec-workflow">Workflow</a>
+        <a href="#sec-example">Run Example</a>
+        <a href="#sec-eval">Evaluation</a>
+        <a href="#sec-run">Run Locally</a>
+        <a href="#sec-team">Team</a>
+      </div>
+    </nav>
+
+    <header class="hero" id="top">
+      <p class="eyebrow">AILT9019 AI Literacy II · Final Project · Group 9</p>
+      <h1>Spendly</h1>
+      <p class="lead">
+        A browser-local Hong Kong dollar expense tracker that combines exact-fraction entry, transaction calendar and monthly budget views, and privacy-preserving AI weekly reviews.
+      </p>
+      <div class="cta-row">
+        <a class="btn-primary" href="demo/">Open Interactive Demo →</a>
+        <a class="btn-secondary" href="https://www.youtube.com/watch?v=c6MZOW-LbS8" target="_blank" rel="noopener noreferrer">Watch Demo Video</a>
+        <a class="btn-secondary" href="https://github.com/JerryGong1002/ailt9019-team-project" target="_blank" rel="noopener noreferrer">GitHub Repository</a>
+      </div>
+      <div class="meta-strip" aria-label="Project highlights">
+        <div class="meta-item">
+          <span>Currency &amp; Storage</span>
+          <strong>HKD · Browser Local</strong>
+        </div>
+        <div class="meta-item">
+          <span>Automated Tests</span>
+          <strong class="num">48 / 48 Passing</strong>
+        </div>
+        <div class="meta-item">
+          <span>AI Review Privacy</span>
+          <strong>Aggregates Only</strong>
+        </div>
+        <div class="meta-item">
+          <span>Hosted Demo AI</span>
+          <strong>Multi-Provider BYO Key</strong>
+        </div>
+      </div>
+    </header>
+
+    <main id="main-content">
+      <section id="sec-overview" aria-labelledby="overview-heading">
+        <h2 id="overview-heading">1. Users, Problem &amp; Scope</h2>
+        <p>
+          Spendly is designed for people who record everyday purchases in Hong Kong dollars and want a direct, verifiable answer to a practical question: <em>where did my money go this week?</em> Entering an amount and category immediately updates the ledger, calendar heatmap, trend charts, and monthly budget bar without requiring an account or cloud database.
+        </p>
+        <div class="grid-2">
+          <div class="box">
+            <h3>In Scope</h3>
+            <ul>
+              <li>Offline-first HKD expense entry across 12 main categories and 56 optional subcategories, with inline editing and 12-second delete undo.</li>
+              <li>Instant ledger history, inline SVG trend and category charts, Monday-first calendar heatmap with future-dated entries, and monthly budget tracking (80% warning and 100% threshold).</li>
+              <li>On-demand plain-English weekly review comparing two adjacent 7-day periods using either a user-supplied browser API key (Gemini, OpenAI, Claude, DeepSeek, OpenRouter, or Custom Base URL) or a local/hosted Node.js backend, with a customizable global prompt in Settings.</li>
+            </ul>
+          </div>
+          <div class="box">
+            <h3>Explicitly Out of Scope (“Does Not”)</h3>
+            <ul>
+              <li>Does <strong>not</strong> provide financial, investment, credit, or debt-management advice, or instructions to execute transactions.</li>
+              <li>Does <strong>not</strong> connect to bank accounts, infer purchasing motives, or synchronize ledgers across devices.</li>
+              <li>Historical budget browsing and persistent AI report history remain outside the delivered scope.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="sec-workflow" aria-labelledby="workflow-heading">
+        <h2 id="workflow-heading">2. Workflow &amp; Domain Customisation</h2>
+        <p>
+          All monetary arithmetic, calendar boundaries, schema validation, and week-over-week comparisons are performed deterministically by team-written code before any language model is called. The model supplies concise natural-language phrasing only.
+        </p>
+        <div class="grid-3">
+          <div class="box">
+            <span class="step-num">Step 01 · Input</span>
+            <h3>Exact Entry</h3>
+            <p>Enter an HKD amount or arithmetic expression (e.g. <code>10 / 3 * 3</code>), choose a category, date (past, today, or future), and optional 50-character note.</p>
+          </div>
+          <div class="box">
+            <span class="step-num">Step 02 · Processing</span>
+            <h3>Deterministic Aggregation</h3>
+            <p>Exact rational arithmetic rounds once to integer HKD cents. Future entries appear in the calendar without inflating actual spending until due. Weekly reviews validate two adjacent 7-day periods and precompute shares and deltas (omitting <code>%</code> when the prior total is 0).</p>
+          </div>
+          <div class="box">
+            <span class="step-num">Step 03 · Output</span>
+            <h3>Ledger &amp; Weekly Review</h3>
+            <p>Updates summaries, charts, and monthly budget immediately. When requested, the active global prompt (editable in Settings) and aggregate JSON produce a neutral 3–5 sentence English paragraph.</p>
+          </div>
+        </div>
+
+        <h3>Team-Built Elements vs. Existing Capabilities</h3>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col" style="width:24%">Layer</th>
+                <th scope="col">Team-Built Implementation</th>
+                <th scope="col" style="width:32%">Existing Capability Used</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Core Ledger &amp; Math</strong></td>
+                <td>Exact-fraction calculator (<code>calculator.js</code>), integer-cent storage, calendar heatmap (<code>calendar.js</code>), monthly budget inheritance and overrides (<code>budget.js</code>), and inline SVG charts (<code>app.js</code>).</td>
+                <td>Standard Web APIs (<code>localStorage</code>, <code>&lt;dialog&gt;</code>, inline SVG); zero frontend frameworks or packages.</td>
+              </tr>
+              <tr>
+                <td><strong>Privacy, Validation &amp; Routing</strong></td>
+                <td>Aggregate-only schema builder and contradiction validator (<code>report-data.js</code>), default/custom prompt manager (<code>report-prompt.js</code>), multi-provider browser routing with memory-only key handling and error redaction (<code>report-ui.js</code>), and optional local server (<code>server/server.cjs</code>).</td>
+                <td>Node.js built-in <code>node:http</code> and <code>node:test</code> runner; zero npm dependencies.</td>
+              </tr>
+              <tr>
+                <td><strong>Weekly Summary Prose</strong></td>
+                <td>Domain master prompt (<code>server/weekly-report-prompt.txt</code>) enforcing neutral tone, 3–5 sentence bounds, recorded-only scope, and anti-attribution guardrails, editable in Settings.</td>
+                <td>User-chosen LLM API (Gemini, OpenAI, Claude, DeepSeek, OpenRouter, Custom Base URL, or local/Render backend) for prose generation only.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">
+          <strong>Domain Customisation Highlight:</strong> Individual notes, record IDs, subcategories, and creation timestamps never leave the browser. Even the largest single expense is passed only as an unattributed scalar (<code>maximum</code>) without date or category, and user-entered API keys stay strictly in page memory—never written to <code>localStorage</code> or committed to GitHub.
+        </div>
+      </section>
+
+      <section id="sec-example" aria-labelledby="example-heading">
+        <h2 id="example-heading">3. Genuine Run Example</h2>
+        <p>
+          Both walkthroughs below can be reproduced directly in the <a href="demo/">live interactive demo</a>, watched in the <a href="https://www.youtube.com/watch?v=c6MZOW-LbS8" target="_blank" rel="noopener noreferrer">official demo video</a>, or verified from a fresh local clone.
+        </p>
+        <div class="grid-2">
+          <div class="box">
+            <h3>A. Exact-Fraction Entry Check</h3>
+            <p>In <strong>Personal</strong> or <strong>Demo</strong> mode, enter <code>10 / 3 * 3</code> on the calculator keypad, select <strong>Food</strong>, and save.</p>
+            <p><strong>Observed result:</strong> Evaluated as an exact fraction and stored as <code>1000</code> integer HKD cents, displaying <strong>HK$10.00</strong> (preventing floating-point <code>9.99</code> drift) and immediately updating today’s record group, monthly total, and calendar cell.</p>
+          </div>
+          <div class="box">
+            <h3>B. Two-Week Synthetic Demo Ledger</h3>
+            <p>Switch to the built-in <strong>Demo</strong> ledger (16 synthetic entries across 14 days, separate HK$3,000 demo budget) and expand <em>Inspect the summary sent for AI reporting</em>:</p>
+            <ul>
+              <li>Current 7 days: <strong class="num">HK$854.00</strong> (12 entries; largest single expense <strong class="num">HK$249.00</strong>)</li>
+              <li>Previous 7 days: <strong class="num">HK$355.00</strong> (4 entries; max <strong class="num">HK$189.00</strong>) → <strong class="num">+HK$499.00 (+140.6%)</strong></li>
+              <li>Top categories: Food <strong class="num">HK$289.00</strong> (33.8%, +416.1%), Shopping <strong class="num">HK$249.00</strong> (29.2%, +31.7%), Living <strong class="num">HK$128.00</strong> (15.0%)</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>Aggregate JSON Payload Sent to the AI Model (Excerpt)</h3>
+        <pre><code>{
+  "currency": "HKD",
+  "comparisonAvailable": true,
+  "current": {
+    "count": 12,
+    "total": "854.00",
+    "maximum": "249.00",
+    "categories": [
+      { "category": "food", "total": "289.00", "share": "33.8%" },
+      { "category": "shopping", "total": "249.00", "share": "29.2%" },
+      { "category": "living", "total": "128.00", "share": "15.0%" }
+    ]
+  },
+  "previous": { "count": 4, "total": "355.00", "maximum": "189.00" },
+  "change": { "amount": "499.00", "percent": "140.6%" }
+}</code></pre>
+        <p class="note">
+          The numbers above are deterministic outputs from <code>WeeklyReportData.modelSummary()</code> on the synthetic Demo ledger—not mocked prose. To generate a live English review from this exact payload, open <a href="demo/">the interactive demo</a>, switch to <strong>Demo</strong>, enter your own API key (e.g. a Google AI Studio Gemini key), and click <strong>Generate weekly report</strong>.
+        </p>
+      </section>
+
+      <section id="sec-eval" aria-labelledby="evaluation-heading">
+        <h2 id="evaluation-heading">4. Evaluation Results, Failure Cases &amp; Limitations</h2>
+        <p>
+          Running <code>node --test tests/*.test.cjs</code> executes <strong>48 automated tests across 6 suites</strong> (all 48 passing, zero external test dependencies), verifying numerical precision, calendar/budget boundaries, aggregate schema validation, prompt parity, multi-provider routing, and failure recovery.
+        </p>
+
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col" style="width:26%">Test Suite</th>
+                <th scope="col" style="width:14%">Result</th>
+                <th scope="col">Coverage</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>tests/calculator.test.cjs</code></td>
+                <td class="num"><strong>5 / 5 pass</strong></td>
+                <td>Operator precedence, exact fractions, half-cent rounding, division-by-zero and invalid-input rejection.</td>
+              </tr>
+              <tr>
+                <td><code>tests/calendar.test.cjs</code></td>
+                <td class="num"><strong>4 / 4 pass</strong></td>
+                <td>Leap years, Monday-first grid offsets, future-dated entry separation, intensity levels, non-mutating edits.</td>
+              </tr>
+              <tr>
+                <td><code>tests/budget.test.cjs</code></td>
+                <td class="num"><strong>4 / 4 pass</strong></td>
+                <td>Monthly inheritance without balance rollover, month-only overrides, 80%/100% thresholds, malformed storage guard.</td>
+              </tr>
+              <tr>
+                <td><code>tests/statistics.test.cjs</code></td>
+                <td class="num"><strong>8 / 8 pass</strong></td>
+                <td>Integer cents, inclusive 7-day windows, synthetic data total conservation, subcategories, custom date ranges.</td>
+              </tr>
+              <tr>
+                <td><code>tests/report.test.cjs</code></td>
+                <td class="num"><strong>11 / 11 pass</strong></td>
+                <td>Aggregate schema validation, prompt parity with <code>weekly-report-prompt.txt</code>, <code>{ summary, prompt }</code> override, CORS, concurrency &amp; hourly rate caps, secret redaction.</td>
+              </tr>
+              <tr>
+                <td><code>tests/report-ui.test.cjs</code></td>
+                <td class="num"><strong>16 / 16 pass</strong></td>
+                <td>Empty-week 0-network fallback, ledger-switch &amp; key-clear abort races, 5 provider presets + Custom Base URL, memory-only key &amp; error redaction, Settings prompt persistence &amp; reset.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Observed Failure &amp; Boundary Cases</h3>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col" style="width:24%">Case</th>
+                <th scope="col" style="width:34%">Expected / Safeguard</th>
+                <th scope="col">Observed Behaviour &amp; Mitigation</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Unsupported LLM Attribution</strong><br><span class="note">(Midterm live check)</span></td>
+                <td>Model must not assign a category to <code>maximum</code> because category is omitted from the payload.</td>
+                <td>An earlier live response attributed the HK$249.00 largest expense to Shopping solely because Shopping’s category total also equaled HK$249.00. Added an explicit anti-attribution rule to <code>weekly-report-prompt.txt</code> (enforced by automated parity test) and surfaced the inspectable JSON summary in the UI.</td>
+              </tr>
+              <tr>
+                <td><strong>Empty Current Week</strong><br><span class="note">(Boundary case)</span></td>
+                <td>Return exact fixed fallback locally with 0 API calls.</td>
+                <td>Verified in unit and browser checks: displays <em>“No expenses were recorded for this seven-day period.”</em> with zero network requests even when an API key is entered.</td>
+              </tr>
+              <tr>
+                <td><strong>Ledger Switch / Key Clear Mid-Request</strong><br><span class="note">(Race condition)</span></td>
+                <td>Delayed reply from a previous ledger or cleared key must never overwrite current state.</td>
+                <td>Version tokens and <code>AbortController</code> cancel in-flight requests and discard stale responses; Generate remains immediately usable afterward.</td>
+              </tr>
+              <tr>
+                <td><strong>Invalid Input, Unsafe URLs &amp; Provider Errors</strong><br><span class="note">(Robustness)</span></td>
+                <td>Block bad inputs before saving/calling; sanitize all errors.</td>
+                <td>Division by zero, non-HTTPS/credentialed custom URLs, contradictory summaries, HTTP 401/403/404/429, CORS failures, and truncated/markdown model replies show actionable inline messages with API keys scrubbed.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Known Limitations &amp; Ethics / Privacy</h3>
+        <ul>
+          <li><strong>Prose verification:</strong> Automated tests confirm deterministic arithmetic, payload validation, and error handling—not the live factual-accuracy rate of third-party LLM prose. Users should verify reported figures against the visible summary.</li>
+          <li><strong>Privacy boundary:</strong> Personal records stay in origin-scoped browser <code>localStorage</code> and API keys stay in memory only, but user-initiated AI reviews still send aggregate seven-day spending patterns to the selected API provider.</li>
+          <li><strong>Recording bias:</strong> An incomplete ledger can make changes in recording habits look like changes in real spending; the default prompt restricts claims to <em>recorded</em> expenses and forbids inferring motives or giving financial advice.</li>
+          <li><strong>Browser CORS constraints:</strong> Direct browser calls depend on the selected provider’s CORS policy (verified on Google’s Gemini API for this origin; providers that restrict browser CORS can still be accessed via the local Node server).</li>
+        </ul>
+      </section>
+
+      <section id="sec-run" aria-labelledby="run-heading">
+        <h2 id="run-heading">5. Run Instructions &amp; Reproducibility</h2>
+        <div class="grid-2">
+          <div class="box">
+            <h3>Option A · Online GitHub Pages Demo</h3>
+            <p>Open <a href="demo/">jerrygong1002.github.io/ailt9019-team-project/demo/</a>.</p>
+            <ul>
+              <li>Expense entry, calculator, calendar heatmap, SVG charts, and monthly budgets run immediately in the browser with no setup.</li>
+              <li>For live AI weekly reviews, choose <strong>Gemini</strong>, <strong>OpenAI</strong>, <strong>Claude</strong>, <strong>DeepSeek</strong>, <strong>OpenRouter</strong>, or <strong>Custom Base URL</strong> and paste your own API key (memory-only; clears on reload or via <strong>Clear</strong>).</li>
+              <li>Open <strong>Settings</strong> to inspect, customize, or reset the initial global weekly-report prompt (saved in browser <code>localStorage</code>).</li>
+            </ul>
+          </div>
+          <div class="box">
+            <h3>Option B · Fresh Clone, Tests &amp; Local Server</h3>
+            <p>Requires <strong>Node.js ≥ 22</strong> with zero npm packages.</p>
+            <pre><code>git clone https://github.com/JerryGong1002/ailt9019-team-project.git
+cd ailt9019-team-project
+node --test tests/*.test.cjs
+
+# Offline ledger only: open dist/index.html
+# Full local server (copy .env.example to .env first):
+node --env-file=.env server/server.cjs</code></pre>
+            <p class="note">Open the local URL printed by the server (default <code>http://127.0.0.1:9019</code>). Leaving the browser API key empty routes requests through the local server using your private <code>.env</code> credentials.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="sec-team" aria-labelledby="team-heading">
+        <h2 id="team-heading">6. Team &amp; Project Links</h2>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col" style="width:28%">Member (Group 9)</th>
+                <th scope="col">Completed Modules &amp; Contributions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Gao Haoxiang</strong></td>
+                <td>Co-authored project proposals; built transaction calendar (<code>calendar.js</code>) and exact-fraction calculator (<code>calculator.js</code>); authored calendar and calculator tests.</td>
+              </tr>
+              <tr>
+                <td><strong>Darrel Nathan Prasetia</strong></td>
+                <td>Co-authored project proposals; built monthly budget engine (<code>budget.js</code>), designed the weekly-report aggregate summary payload and backend integration plan; authored budget tests.</td>
+              </tr>
+              <tr>
+                <td><strong>Gong Xuanyu</strong></td>
+                <td>Co-authored project proposals; implemented expense entry, category/record management, inline editing/undo, overview statistics, and SVG trend charts (<code>app.js</code>); authored statistics tests.</td>
+              </tr>
+              <tr>
+                <td><strong>Zhang Zhanhao</strong></td>
+                <td>Co-authored project proposals; built responsive desktop/mobile layout, light/dark themes (<code>styles.css</code>, <code>theme.js</code>), language switching (<code>i18n.js</code>), synthetic demo ledger, README, and static hosting setup.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ul class="links-list" aria-label="Project resources">
+          <li><a href="demo/">Interactive Demo</a></li>
+          <li><a href="https://www.youtube.com/watch?v=c6MZOW-LbS8" target="_blank" rel="noopener noreferrer">Official Demo Video (YouTube)</a></li>
+          <li><a href="https://github.com/JerryGong1002/ailt9019-team-project" target="_blank" rel="noopener noreferrer">GitHub Repository</a></li>
+          <li><a href="https://github.com/JerryGong1002/ailt9019-team-project#readme" target="_blank" rel="noopener noreferrer">README &amp; Setup Guide</a></li>
+          <li><a href="https://github.com/JerryGong1002/ailt9019-team-project/blob/main/server/weekly-report-prompt.txt" target="_blank" rel="noopener noreferrer">Default Master Prompt</a></li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>Spendly · AILT9019 AI Literacy II · Group 9</span>
+      <span>Static HTML/CSS/JS · Zero external dependencies · No embedded API keys</span>
+    </footer>
+  </div>
+</body>
+</html>
