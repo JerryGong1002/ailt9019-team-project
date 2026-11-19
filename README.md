@@ -6,23 +6,6 @@ A browser-based HKD expense tracker developed for the AILT9019 Group 9 team proj
 
 The current prototype defaults to English on first use and remembers the selected language. It also contains legacy Simplified Chinese and Traditional Chinese translations and Chinese source strings. These remain in the implementation and require a separate migration to meet the project-wide English requirement fully.
 
-## Gemini deployment (GitHub Pages + Render)
-
-The deployment preset uses Google AI Studio Gemini API through Google's OpenAI-compatible endpoint, with `gemini-3.1-flash-lite` and low reasoning effort. The model can be changed using `AI_MODEL` on Render. Credentials and model access still require a live check after entering the key.
-
-[Deploy the backend on Render](https://render.com/deploy?repo=https://github.com/JerryGong1002/ailt9019-team-project)
-
-1. Sign in to Render and use the deployment link. The root `render.yaml` selects a free Node service and fills all non-secret settings. Enter the Gemini key in `AI_API_KEY` when prompted. No key goes in GitHub.
-2. After deployment, copy Render's actual HTTPS service URL into `apiBaseUrl` in `dist/config.js` on main and `demo/config.js` on gh-pages. Do not guess the assigned hostname. The Render URL also serves the complete app directly.
-3. Keep the existing GitHub Pages source (`gh-pages`, repository root). Publish the updated `dist` files under `demo/` on that branch, preserving the project overview at the root.
-4. Open the Pages site, select Demo and generate a report. Confirm a successful real output and check its figures. Test the error state with a missing key separately.
-
-The allowed browser origin is `https://jerrygong1002.github.io` (no repository path). Change `ALLOWED_ORIGINS` if using a custom domain. CORS is not authentication: the public demo has a process-local cap of 30 upstream attempts per hour and one concurrent request. Limits reset on restart and are not shared between replicas. Free Render instances may sleep, so the first request can be slow; the browser waits up to 90 seconds. The upstream provider timeout remains 30 seconds.
-
-The hosted GitHub Pages `demo/` also works standalone without a Render backend when a user supplies their own browser API key (Gemini, OpenAI, Claude, DeepSeek, OpenRouter, or a Custom Base URL), while Render remains available as an optional zero-key server backend.
-
-References: [Gemini compatibility](https://ai.google.dev/gemini-api/docs/openai), [Render Blueprints](https://render.com/docs/blueprint-spec).
-
 ## Run locally
 
 From the repository root:
@@ -100,7 +83,7 @@ The last seven days means today and the preceding six local calendar days, inclu
 
 For trends longer than 30 days, consecutive date buckets show average daily spending within each bucket. The horizontal reference line represents the daily average across the full selected interval.
 
-## AI weekly report
+## Optional AI weekly report
 
 The **AI weekly review** panel supports both **browser-direct user API keys (BYO key)** and an **optional Node backend**:
 
@@ -128,6 +111,12 @@ node --env-file=.env server/server.cjs
 4. Open the URL printed by the server (the default in `.env.example` and `server/server.cjs` is `PORT=9019`, so its URL is `http://127.0.0.1:9019`, configurable in `.env`), select Demo, inspect the summary, then click **Generate weekly report**. Leave the terminal running while using the app; press Ctrl+C to stop it.
 
 Without backend credentials, the server still serves the app and reports a clear configuration error when no browser API key is entered. Static HTTP hosting (`python -m http.server 9019 --bind 127.0.0.1 --directory dist` or GitHub Pages) supports both the ledger and browser-direct AI reporting when a user supplies their own API key; opening `dist/index.html` directly via `file://` requires a browser API key or the Node server for AI reports. Continue using the same browser origin to retain your existing personal records.
+
+### Optional backend hosting on Render
+
+The ledger, calendar, budgets, and spending statistics run entirely in the browser. For a shared weekly-report backend, deploy the [Render Blueprint](https://render.com/deploy?repo=https://github.com/JerryGong1002/ailt9019-team-project) and store the provider key in Render as `AI_API_KEY`. The supplied preset uses Gemini. To use another compatible provider, update the endpoint, model, and provider-specific settings in `render.yaml` to match.
+
+To connect GitHub Pages to the backend, set `apiBaseUrl` in `dist/config.js` to the HTTPS URL assigned by Render, then publish the updated configuration to `demo/config.js` on the `gh-pages` branch. For a custom domain, set `ALLOWED_ORIGINS` to the site's origin. To verify deployment, select **Try demo**, leave the browser key field empty, generate a weekly report, and compare its figures with the displayed summary.
 
 ### Previous Alibaba Cloud Bailian configuration (historical)
 
