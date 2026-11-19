@@ -21,10 +21,12 @@ const WeeklyReportUI = (() => {
     if(location.protocol==='file:'){status.textContent='Start the Node server and open its URL to generate AI reports.';return;}
     const requestController=new AbortController();
     controller=requestController;
-    const timer=setTimeout(()=>requestController.abort(),40000);
+    const timer=setTimeout(()=>requestController.abort(),90000);
     button.disabled=true;button.textContent='Generating…';status.textContent='Generating your English weekly report…';
     try {
-      const response=await fetch('/api/weekly-report',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(summary),signal:requestController.signal});
+      const configuredBase=globalThis.SPENDLY_CONFIG?.apiBaseUrl || '';
+      if(!configuredBase && location.hostname?.endsWith('.github.io')) throw new Error('The report server has not been connected yet.');
+      const response=await fetch(configuredBase.replace(/\/+$/,'')+'/api/weekly-report',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(summary),signal:requestController.signal});
       let result;
       try {result=await response.json();} catch {throw new Error('AI reporting requires the Node server. This static host does not provide the report API.');}
       if(!response.ok) throw new Error(result.error||'The weekly report could not be generated.');
