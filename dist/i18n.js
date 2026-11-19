@@ -128,6 +128,12 @@
     ["备注", "Note", "備註"],
     ["至少保留一个分类。", "Keep at least one category enabled.", "至少保留一個分類。"],
     ["设置未能保存，刷新后将恢复。", "Settings could not be saved and will reset on reload.", "設定未能儲存，重新整理後將恢復。"],
+    ["AI 周报全局提示词", "Global AI weekly report prompt", "AI 週報全域提示詞"],
+    ["恢复默认", "Reset to default", "恢復預設"],
+    ["预设为系统默认英文提示词，可在下方直接编辑并自动保存到当前浏览器，同时用于本地服务器与浏览器直连 API。清空内容将恢复默认提示词。", "Pre-filled with the default English prompt. Edits auto-save in this browser and apply to both local server and browser-direct API requests. Clearing the text restores the default.", "預設為系統預設英文提示詞，可在下方直接編輯並自動儲存至目前瀏覽器，同時用於本地伺服器與瀏覽器直連 API。清空內容將恢復預設提示詞。"],
+    ["当前使用默认提示词", "Using default prompt", "目前使用預設提示詞"],
+    ["已保存自定义提示词", "Custom prompt saved", "已儲存自訂提示詞"],
+    ["已恢复默认提示词", "Restored default prompt", "已恢復預設提示詞"],
 
     ['更多分类', 'More categories', '更多分類'],
     ["大类", "Category", "大類"],

@@ -19,6 +19,8 @@ The deployment preset uses Google AI Studio Gemini API through Google's OpenAI-c
 
 The allowed browser origin is `https://jerrygong1002.github.io` (no repository path). Change `ALLOWED_ORIGINS` if using a custom domain. CORS is not authentication: the public demo has a process-local cap of 30 upstream attempts per hour and one concurrent request. Limits reset on restart and are not shared between replicas. Free Render instances may sleep, so the first request can be slow; the browser waits up to 90 seconds. The upstream provider timeout remains 30 seconds.
 
+The hosted GitHub Pages `demo/` also works standalone without a Render backend when a user supplies their own browser API key (Gemini, OpenAI, Claude, DeepSeek, OpenRouter, or a Custom Base URL), while Render remains available as an optional zero-key server backend.
+
 References: [Gemini compatibility](https://ai.google.dev/gemini-api/docs/openai), [Render Blueprints](https://render.com/docs/blueprint-spec).
 
 ## Run locally
@@ -100,9 +102,16 @@ For trends longer than 30 days, consecutive date buckets show average daily spen
 
 ## AI weekly report
 
-The weekly-review button now calls a same-origin Node backend, which sends aggregate statistics to the configured AI provider (OpenAI Responses or Alibaba-compatible Chat Completions). The global master prompt lives in `server/weekly-report-prompt.txt` and includes one clarification: matching category totals cannot establish the category of the maximum expense. It requests a neutral English paragraph of 3–5 sentences, without recommendations. Raw records, IDs, notes, subcategories, and creation timestamps are never sent. Reports stay in browser memory and disappear when the selected ledger or summary changes or the page reloads.
+The **AI weekly review** panel supports both **browser-direct user API keys (BYO key)** and an **optional Node backend**:
 
-The browser produces two adjacent seven-day summaries ending on the user's local date. The server validates dates, totals, counts, categories, daily totals and maximum amounts, then calculates category shares and changes. Percentage change is null when the previous total is zero. Zero previous recorded spending is a valid recorded baseline, not evidence about real-world spending. Empty current weeks use the exact fallback locally without a paid request. Invalid summaries are rejected before the API is called.
+- **Multi-provider browser-direct mode**: Supply an optional API key directly in the browser using built-in presets for **Gemini** (`x-goog-api-key`), **OpenAI** (`/v1/responses`), **Claude (Anthropic)** (`x-api-key`), **DeepSeek** (`/chat/completions`), and **OpenRouter** (`/api/v1/chat/completions`), or choose **Custom Base URL** with selectable wire formats (`openai-chat`, `openai-responses`, `anthropic`, `gemini`). Custom Base URLs require `https:` (or `http://localhost` / `http://127.0.0.1` for local proxies) and reject embedded credentials, query strings, or fragments.
+- **Memory-only key handling**: Browser API keys stay strictly in memory—they are never written to `localStorage`, `sessionStorage`, URL query parameters, or `dist/config.js`, can be shown/hidden or cleared with **Clear**, and are scrubbed from all error messages. Raw records, IDs, notes, subcategories, and creation timestamps are never sent; only aggregate seven-day statistics leave the browser.
+- **Backend fallback**: Leaving the browser API key empty sends requests to same-origin `/api/weekly-report` (or `SPENDLY_CONFIG.apiBaseUrl` when configured on GitHub Pages), preserving zero-key Node/Render hosting.
+- **Customizable global prompt in Settings**: Open **Settings** (`#settings-dialog`) to inspect, edit, or reset the global weekly report prompt. It is pre-filled from `dist/report-prompt.js` (kept in sync with `server/weekly-report-prompt.txt`), persisted in browser `localStorage` under `spending-analyzer.report-prompt.v1`, and applied to both browser-direct calls and `/api/weekly-report` requests (`{ summary, prompt }` when customized, falling back to `server/weekly-report-prompt.txt` when omitted or blank).
+
+Reports stay in browser memory and disappear when the selected ledger or summary changes or the page reloads.
+
+The browser produces two adjacent seven-day summaries ending on the user's local date. Both the client-side BYO formatter and the server validate dates, totals, counts, categories, daily totals and maximum amounts, then calculate category shares and changes. Percentage change is null when the previous total is zero. Zero previous recorded spending is a valid recorded baseline, not evidence about real-world spending. Empty current weeks use the exact fallback locally without a paid request. Invalid summaries are rejected before any API call is made.
 
 ### Run the full pipeline locally
 
@@ -116,9 +125,9 @@ Requires Node.js 22 or newer; no npm packages are needed.
 node --env-file=.env server/server.cjs
 ```
 
-4. Open the URL printed by the server, select Demo, inspect the summary, then click **Generate weekly report**. The default port is 9019; the current local `.env` uses `PORT=9020`, so its URL is `http://127.0.0.1:9020`. Leave the terminal running while using the app; press Ctrl+C to stop it.
+4. Open the URL printed by the server (the default in `.env.example` and `server/server.cjs` is `PORT=9019`, so its URL is `http://127.0.0.1:9019`, configurable in `.env`), select Demo, inspect the summary, then click **Generate weekly report**. Leave the terminal running while using the app; press Ctrl+C to stop it.
 
-Without credentials, the server still serves the app and reports a clear configuration error for non-empty reports. Python static hosting and directly opening the HTML remain available for the ledger but do not provide AI reporting. Continue using the same browser origin to retain your existing personal records.
+Without backend credentials, the server still serves the app and reports a clear configuration error when no browser API key is entered. Static HTTP hosting (`python -m http.server 9019 --bind 127.0.0.1 --directory dist` or GitHub Pages) supports both the ledger and browser-direct AI reporting when a user supplies their own API key; opening `dist/index.html` directly via `file://` requires a browser API key or the Node server for AI reports. Continue using the same browser origin to retain your existing personal records.
 
 ### Previous Alibaba Cloud Bailian configuration (historical)
 
@@ -161,10 +170,14 @@ No provider secrets or upstream errors are sent to the browser. OpenAI Responses
 | `dist/i18n.js` | Existing language selection and translation layer |
 | `dist/theme.js` | Theme selection and persistence |
 | `dist/report-data.js` | Aggregate report schema, validation, and comparisons |
-| `dist/report-ui.js` | Explicit generation, loading/errors, and stale-response protection |
-| `server/server.cjs` | Static server and local AI report endpoint |
-| `server/weekly-report-prompt.txt` | Global report master prompt |
-| `tests/*.test.cjs` | Statistics, calendar, calculator, and budget tests |
+| `dist/report-prompt.js` | Default weekly report global prompt and `localStorage` persistence helpers |
+| `dist/config.js` | Public runtime configuration (`apiBaseUrl`, secret-free) |
+| `dist/report-ui.js` | Multi-provider BYO API key routing, Custom Base URL, error sanitization, and server fallback |
+| `server/server.cjs` | Static server and `/api/weekly-report` endpoint with optional custom prompt override |
+| `server/weekly-report-prompt.txt` | Default global report master prompt |
+| `tests/*.test.cjs` | Statistics, calendar, calculator, budget, report UI, and backend report tests |
+| `.env.example` | Sample local server environment configuration (secret-free) |
+| `render.yaml` | Render Blueprint configuration for optional backend deployment |
 | `.openai/hosting.json` | Static hosting configuration targeting `dist` |
 
 The `dist` directory contains the complete runnable frontend source. A static hosting configuration is included in the repository; the application itself remains a browser-local prototype.
@@ -181,9 +194,11 @@ node --check dist/budget.js
 node --check dist/i18n.js
 node --check dist/theme.js
 node --check dist/report-data.js
+node --check dist/report-prompt.js
+node --check dist/config.js
 node --check dist/report-ui.js
 node --check server/server.cjs
 node --test tests/*.test.cjs
 ```
 
-The tests cover statistical boundaries, calendar behavior, calculator precedence and precision, invalid input, budget inheritance and overrides, disabling budgets, year transitions, leap months, future expenses, usage thresholds, and malformed budget data.
+The tests cover statistical boundaries, calendar behavior, calculator precedence and precision, invalid input, budget inheritance and overrides, disabling budgets, year transitions, leap months, future expenses, usage thresholds, malformed budget data, multi-provider browser-direct routing, Custom Base URL validation, memory-only API key & error sanitization, customizable global prompt persistence/parity, and backend `/api/weekly-report` overrides and limits.

@@ -3,7 +3,7 @@ const http=require('node:http');
 const fs=require('node:fs');
 const path=require('node:path');
 const {validateSummary,modelSummary}=require('../dist/report-data.js');
-const prompt=fs.readFileSync(path.join(__dirname,'weekly-report-prompt.txt'),'utf8');
+const defaultPrompt=fs.readFileSync(path.join(__dirname,'weekly-report-prompt.txt'),'utf8').replace(/\r\n?/g,'\n');
 const root=path.join(__dirname,'../dist');
 const assets=new Set(fs.readdirSync(root).filter(name=>/\.(html|js|css)$/.test(name)));
 function createServer({apiKey='',model='',apiFormat='responses',baseUrl='https://api.openai.com/v1',enableThinking,reasoningEffort,allowedOrigins=[],maxCalls=30,fetchImpl=fetch}={}) {
@@ -31,11 +31,24 @@ function createServer({apiKey='',model='',apiFormat='responses',baseUrl='https:/
       }
       if (req.method!=='POST') return send(405,{error:'Use POST to generate a report.'});
       if (!(req.headers['content-type']||'').startsWith('application/json')) return send(415,{error:'Send a JSON summary.'});
-      let summary;
+      let summary, activePrompt=defaultPrompt;
       try {
-        let body='', size=0;
-        for await (const chunk of req) {size+=chunk.length;if(size>20000){send(413,{error:'Summary is too large.'});return;}body+=chunk;}
-        summary=validateSummary(JSON.parse(body));
+        const chunks=[]; let size=0;
+        for await (const chunk of req) {size+=chunk.length;if(size>40000){send(413,{error:'Summary is too large.'});return;}chunks.push(chunk);}
+        const parsed=JSON.parse(Buffer.concat(chunks).toString('utf8'));
+        if (!parsed || typeof parsed!=='object' || Array.isArray(parsed)) throw new Error('invalid payload');
+        if (Object.hasOwn(parsed,'summary')) {
+          if (!Object.keys(parsed).every(k=>k==='summary'||k==='prompt')) throw new Error('invalid keys');
+          summary=validateSummary(parsed.summary);
+          if (parsed.prompt!==undefined && parsed.prompt!==null) {
+            if (typeof parsed.prompt!=='string') return send(400,{error:'The weekly report prompt must be a string.'});
+            const normalizedPrompt=parsed.prompt.replace(/\r\n?/g,'\n');
+            if (normalizedPrompt.length>20000) return send(400,{error:'The weekly report prompt must be at most 20,000 characters.'});
+            if (normalizedPrompt.trim()) activePrompt=normalizedPrompt;
+          }
+        } else {
+          summary=validateSummary(parsed);
+        }
       } catch {return send(400,{error:'The weekly report could not be generated from the supplied summary.'});}
       if (summary.current.count===0) return send(200,{report:'No expenses were recorded for this seven-day period.'});
       if (!apiKey || !model) return send(503,{error:'AI reporting is not configured on the server yet.'});
@@ -46,8 +59,8 @@ function createServer({apiKey='',model='',apiFormat='responses',baseUrl='https:/
       try {
         const input=JSON.stringify(modelSummary(summary));
         const body=apiFormat==='chat'
-          ? {model,messages:[{role:'system',content:prompt},{role:'user',content:input}],max_tokens:2048,stream:false,...(reasoningEffort?{reasoning_effort:reasoningEffort}:{}),...(enableThinking===undefined?{}:{enable_thinking:enableThinking})}
-          : {model,instructions:prompt,input,max_output_tokens:2048,store:false};
+          ? {model,messages:[{role:'system',content:activePrompt},{role:'user',content:input}],max_tokens:2048,stream:false,...(reasoningEffort?{reasoning_effort:reasoningEffort}:{}),...(enableThinking===undefined?{}:{enable_thinking:enableThinking})}
+          : {model,instructions:activePrompt,input,max_output_tokens:2048,store:false};
         const response=await fetchImpl(apiUrl,{method:'POST',headers:{authorization:`Bearer ${apiKey}`,'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(30000),redirect:'error'});
         if (!response.ok) throw new Error('provider');
         const data=await response.json();

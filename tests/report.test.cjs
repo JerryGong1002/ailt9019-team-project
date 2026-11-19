@@ -1,6 +1,9 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const { buildSummary, modelSummary, validateSummary } = require('../dist/report-data.js');
+const { WeeklyReportPrompt } = require('../dist/report-prompt.js');
 const { createServer } = require('../server/server.cjs');
 const fixture = () => buildSummary([
   {date:'2026-10-23', cents:2000, category:'food', note:'PRIVATE', id:'secret'},
@@ -127,5 +130,74 @@ test('Pages CORS permits the exact origin, rejects others and preserves error he
     assert.equal(missing.status,503);
     assert.equal(missing.headers.get('access-control-allow-origin'),origin);
     assert.equal((await fetch(base+'/healthz')).status,200);
+  });
+});
+
+test('dist/report-prompt.js stays in exact LF parity with server/weekly-report-prompt.txt', () => {
+  const filePrompt = fs.readFileSync(path.join(__dirname, '..', 'server', 'weekly-report-prompt.txt'), 'utf8').replace(/\r\n?/g, '\n');
+  assert.equal(WeeklyReportPrompt, filePrompt);
+  assert.equal(WeeklyReportPrompt.trim(), filePrompt.trim());
+});
+
+test('endpoint accepts { summary, prompt } overrides and falls back when prompt is omitted or blank', async () => {
+  const defaultPrompt = fs.readFileSync(path.join(__dirname, '..', 'server', 'weekly-report-prompt.txt'), 'utf8').replace(/\r\n?/g, '\n');
+  const seenPrompts = [];
+
+  for (const apiFormat of ['responses', 'chat']) {
+    seenPrompts.length = 0;
+    await usingServer({
+      apiKey: 'test-secret',
+      model: 'test-model',
+      apiFormat,
+      fetchImpl: async (_url, options) => {
+        const body = JSON.parse(options.body);
+        seenPrompts.push(apiFormat === 'chat' ? body.messages[0].content : body.instructions);
+        return {
+          ok: true,
+          json: async () => apiFormat === 'chat'
+            ? { choices: [{ finish_reason: 'stop', message: { content: 'Recorded food spending was HK$30.00.' } }] }
+            : { status: 'completed', output: [{ type: 'message', content: [{ type: 'output_text', text: 'Recorded food spending was HK$30.00.' }] }] }
+        };
+      }
+    }, async base => {
+      assert.equal((await post(base, { summary: fixture(), prompt: 'Custom global prompt.' })).status, 200);
+      assert.equal((await post(base, { summary: fixture() })).status, 200);
+      assert.equal((await post(base, { summary: fixture(), prompt: null })).status, 200);
+      assert.equal((await post(base, { summary: fixture(), prompt: '' })).status, 200);
+      assert.equal((await post(base, { summary: fixture(), prompt: '   \n  ' })).status, 200);
+    });
+    assert.deepEqual(seenPrompts, [
+      'Custom global prompt.',
+      defaultPrompt,
+      defaultPrompt,
+      defaultPrompt,
+      defaultPrompt
+    ]);
+  }
+});
+
+test('endpoint validates { summary, prompt } types, extra keys, size limits, and empty-week order', async () => {
+  let upstreamCalls = 0;
+  await usingServer({
+    apiKey: 'test-secret',
+    model: 'test-model',
+    fetchImpl: async () => {
+      upstreamCalls++;
+      return { ok: true, json: async () => ({ status: 'completed', output: [{ type: 'message', content: [{ type: 'output_text', text: 'Recorded spending was HK$30.00.' }] }] }) };
+    }
+  }, async base => {
+    const empty = buildSummary([], '2026-10-23');
+    assert.equal((await post(base, { summary: fixture(), prompt: 123 })).status, 400);
+    assert.equal((await post(base, { summary: fixture(), prompt: {} })).status, 400);
+    assert.equal((await post(base, { summary: empty, prompt: 123 })).status, 400);
+    assert.equal((await post(base, { summary: fixture(), prompt: 'ok', extra: 1 })).status, 400);
+    assert.equal((await post(base, { summary: { bad: true }, prompt: 'ok' })).status, 400);
+    assert.equal((await post(base, { summary: fixture(), prompt: 'a'.repeat(20001) })).status, 400);
+    assert.equal((await post(base, { summary: fixture(), prompt: 'a'.repeat(19000) })).status, 200);
+    assert.equal((await post(base, { summary: fixture(), prompt: 'b'.repeat(39500) })).status, 413);
+    const emptyRes = await post(base, { summary: empty, prompt: 'Custom prompt' });
+    assert.equal(emptyRes.status, 200);
+    assert.equal((await emptyRes.json()).report, 'No expenses were recorded for this seven-day period.');
+    assert.equal(upstreamCalls, 1);
   });
 });
